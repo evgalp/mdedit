@@ -1,4 +1,5 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, dialog } = require("electron");
+const fs = require("fs");
 
 let mainWindow = null;
 
@@ -19,3 +20,23 @@ app.on("ready", () => {
     mainWindow = null;
   });
 });
+
+const getFileFromUser = (exports.getFileFromUser = () => {
+  const files = dialog.showOpenDialog(mainWindow, {
+    properties: ["openFile"],
+    filters: [
+      { name: "Markdown Files", extensions: ["md", "markdown"] },
+      { name: "Text Files", extensions: ["txt"] }
+    ]
+  });
+  if (files) {
+    openFile(files[0]);
+  } else {
+    return;
+  }
+});
+
+const openFile = file => {
+  const content = fs.readFileSync(file).toString();
+  mainWindow.webContents.send("file-opened", file, content);
+};
