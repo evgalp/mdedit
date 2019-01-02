@@ -1,28 +1,47 @@
 const { app, BrowserWindow, dialog } = require("electron");
 const fs = require("fs");
 
+const windows = new Set();
 let mainWindow = null;
 
 app.on("ready", () => {
-  mainWindow = new BrowserWindow({
-    show: false,
-    width: 1280,
-    height: 1024
-  });
-  mainWindow.webContents.loadURL(`file://${__dirname}/index.html`);
-
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
-    mainWindow.webContents.openDevTools();
-  });
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
+  createWindow();
 });
 
-const getFileFromUser = (exports.getFileFromUser = () => {
-  const files = dialog.showOpenDialog(mainWindow, {
+const createWindow = (exports.createWindow = () => {
+  let x, y;
+
+  const currentWindow = BrowserWindow.getFocusedWindow();
+
+  if (currentWindow) {
+    const [currentWindowX, currentWindowY] = currentWindow.getPosition();
+    x = currentWindowX + 10;
+    y = currentWindowY + 10;
+  }
+
+  let newWindow = new BrowserWindow({
+    x,
+    y,
+    show: false,
+    width: 800,
+    height: 600
+  });
+  newWindow.webContents.loadURL(`file://${__dirname}/index.html`);
+
+  newWindow.once("ready-to-show", () => {
+    newWindow.show();
+  });
+
+  newWindow.on("closed", () => {
+    newWindow = null;
+  });
+
+  windows.add(newWindow);
+  return newWindow;
+});
+
+const getFileFromUser = (exports.getFileFromUser = targetWindow => {
+  const files = dialog.showOpenDialog(targetWindow, {
     properties: ["openFile"],
     filters: [
       { name: "Markdown Files", extensions: ["md", "markdown"] },
@@ -30,13 +49,13 @@ const getFileFromUser = (exports.getFileFromUser = () => {
     ]
   });
   if (files) {
-    openFile(files[0]);
+    openFile(targetWindow, files[0]);
   } else {
     return;
   }
 });
 
-const openFile = file => {
+const openFile = (exports.openFile = (targetWindow, file) => {
   const content = fs.readFileSync(file).toString();
-  mainWindow.webContents.send("file-opened", file, content);
-};
+  targetWindow.webContents.send("file-opened", file, content);
+});
