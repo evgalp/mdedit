@@ -8,6 +8,15 @@ app.on("ready", () => {
   createWindow();
 });
 
+app.on("will-finish-launching", () => {
+  app.on("open-file", (event, file) => {
+    const win = createWindow();
+    win.once("ready-to-show", () => {
+      openFile(win, file);
+    });
+  });
+});
+
 const createWindow = (exports.createWindow = () => {
   let x, y;
 
@@ -57,5 +66,33 @@ const getFileFromUser = (exports.getFileFromUser = targetWindow => {
 
 const openFile = (exports.openFile = (targetWindow, file) => {
   const content = fs.readFileSync(file).toString();
+  app.addRecentDocument(file);
+  targetWindow.setRepresentedFilename(file);
   targetWindow.webContents.send("file-opened", file, content);
+});
+
+const saveHtml = (exports.saveHtml = (targetWindow, content) => {
+  const file = dialog.showSaveDialog(targetWindow, {
+    title: "Save HTML",
+    defaultPath: app.getPath("documents"),
+    fileters: [{ name: "HTML Files", extensions: ["html", "html"] }]
+  });
+
+  if (!file) return;
+
+  fs.writeFileSync(file, content);
+});
+
+const saveMarkdown = (exports.saveMarkdown = (targetWindow, file, content) => {
+  if (!file) {
+    file = dialog.showSaveDialog(targetWindow, {
+      title: "Save Markdown",
+      defaultPath: app.getPath("documents"),
+      filters: [{ name: "Markdown Files", extensions: ["md", "markdown"] }]
+    });
+  }
+
+  if (!file) return;
+  defaultStatus.writeFileSync(file, content);
+  openFile(targetWindow, file);
 });
